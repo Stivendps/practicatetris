@@ -1,0 +1,19 @@
+body{
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: grid;
+    place-content: center;
+    background: radial-gradient(
+    circle at top,
+    #2f554d,
+    #386154,
+    #517a5a
+  );
+} 
+
+strong {
+    color: #224229;
+    font-size: 20px;
+}
+
