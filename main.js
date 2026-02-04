@@ -5,7 +5,7 @@ const context = canvas.getContext("2d")
 
 const block_size = 22
 const board_width = 14
-const board_height = 30
+const board_height = 29
 
 canvas.width = block_size * board_width
 canvas.height = block_size * board_height
@@ -25,7 +25,6 @@ STYLES.background.addColorStop(0.5, "#749d7a")
 STYLES.background.addColorStop(1, "#a9c692")
 
 const board = [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -84,7 +83,7 @@ function update (time = 0){
     lastTime = time
     dropCounter += deltaTime
 
-    if (dropCounter > 200){
+    if (dropCounter > 115){
         piece.position.y++
         dropCounter = 0
 
@@ -219,3 +218,53 @@ function removerows(){
 }
 
 update()
+
+
+let touchStartX = 0
+let touchStartY = 0
+let touchEndX = 0
+let touchEndY = 0
+
+const SWIPE_THRESHOLD = 30
+
+canvas.addEventListener("touchstart", e => {
+    const touch = e.touches[0]
+    touchStartX = touch.clientX
+    touchStartY = touch.clientY
+}, { passive: true })
+
+canvas.addEventListener("touchend", e => {
+    const touch = e.changedTouches[0]
+    touchEndX = touch.clientX
+    touchEndY = touch.clientY
+
+    handleSwipe()
+}, { passive: true })
+
+function handleSwipe() {
+    const dx = touchEndX - touchStartX
+    const dy = touchEndY - touchStartY
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+        // 👉 Horizontal
+        if (dx > SWIPE_THRESHOLD) {
+            piece.position.x++
+            if (checkCollision()) piece.position.x--
+        } else if (dx < -SWIPE_THRESHOLD) {
+            piece.position.x--
+            if (checkCollision()) piece.position.x++
+        }
+    } else {
+        // 👇 Vertical
+        if (dy > SWIPE_THRESHOLD) {
+            piece.position.y++
+            if (checkCollision()) {
+                piece.position.y--
+                solidifypiece()
+                removerows()
+            }
+        } else if (dy < -SWIPE_THRESHOLD) {
+            rotatePiece()
+        }
+    }
+}
