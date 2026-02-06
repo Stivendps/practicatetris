@@ -1,4 +1,8 @@
 //tablero
+let score = 0               // puntos = líneas
+let level = 1
+let dropInterval = 500      // velocidad inicial (ms)
+let gameRunning = false
 
 const canvas = document.querySelector("canvas")
 const context = canvas.getContext("2d")
@@ -79,11 +83,12 @@ let dropCounter = 0
 let lastTime = 0
 
 function update (time = 0){
+    if (!gameRunning) return
     const deltaTime = time - lastTime
     lastTime = time
     dropCounter += deltaTime
 
-    if (dropCounter > 500){
+if (dropCounter > dropInterval) {
         piece.position.y++
         dropCounter = 0
 
@@ -196,25 +201,8 @@ function solidifypiece(){
     piece.position.y = 0
 
     if (checkCollision()){
-        window.alert("GAME OVER! ponme HBO")
-        board.forEach((row)=> row.fill(0))
+        gameOver()
     }
-}
-
-// eliminacion de linea solidificada
-function removerows(){
-    const rowsToRemove = []
-
-    board.forEach((row,y)=>{
-        if (row.every(value => value === 1)){
-            rowsToRemove.push(y)
-        }
-    })
-
-    rowsToRemove.forEach(y =>{
-        board.splice(y,1)
-        board.unshift(Array(board_width).fill(0))
-    })
 }
 
 // variables touch movil
@@ -343,5 +331,135 @@ function rotatePiece() {
     if (checkCollision()) piece.shape = prev
 }
 
+// subir velocidad del juego 
+function updateSpeed(){
+    level = Math.floor(score / 2) + 1
+
+    // acelera progresivamente pero con límite
+    dropInterval = Math.max(
+        100,
+        500 - (level - 1) * 100
+    )
+}
+
+// aqui usamos el scor para mostrar en pantalla
+const scoreText = document.getElementById("score-text")
+
+function updateScoreUI(){
+    scoreText.textContent = `Puntuacion: ${score}`
+}
+// la funcion se llama cada vez que eliminamos una linea 
+function removerows(){
+    let linesCleared = 0
+
+    for (let y = board.length - 1; y >= 0; y--) {
+        if (board[y].every(value => value === 1)) {
+            board.splice(y, 1)
+            board.unshift(Array(board_width).fill(0))
+            linesCleared++
+            y++
+        }
+    }
+
+    if (linesCleared > 0) {
+        score += linesCleared
+        updateSpeed()
+        updateScoreUI()
+    }
+}
 
 
+// funcion del game over luego Supabase
+async function gameOver() {
+    if (!gameRunning) return
+    gameRunning = false
+
+    const name = prompt("GAME OVER 🎮\nIngresa tu nombre:")
+
+    if (name && name.trim() !== "") {
+        await saveScore(name.trim(), score)
+    }
+
+    // reset del juego
+    score = 0
+    level = 1
+    dropInterval = 500
+    dropCounter = 0
+
+    updateScoreUI()
+    board.forEach(row => row.fill(0))
+
+    // volver al ranking
+    document.getElementById("game-screen").style.display = "none"
+    document.getElementById("start-screen").style.display = "block"
+
+    await loadScores()
+}
+
+
+
+// funcion para guardar el scoreasync function saveScore(name, score) {
+async function saveScore(name, score) {
+    const { error } = await window.supabase
+        .from("scores")
+        .insert([{ name, score }])
+
+    if (error) {
+        console.error("Error guardando score:", error)
+        return
+    }
+
+}
+
+// LEEMOS EL SUPABASE PARA MOSTRAR EN HTML
+async function loadScores() {
+    const list = document.getElementById("score-list")
+    if (!list) return
+
+    list.innerHTML = ""
+
+    const { data, error } = await window.supabase
+        .from("scores")
+        .select("*")
+        .order("score", { ascending: false })
+        .limit(10)
+
+    if (error) {
+        console.error("Error cargando scores:", error)
+        return
+    }
+
+    data.forEach(({ name, score }) => {
+        const li = document.createElement("li")
+        li.textContent = `${name} — ${score}`
+        list.appendChild(li)
+    })
+}
+
+// cargar puntajes al iniciar
+loadScores()
+// arraca el juego en limpio
+document.getElementById("play-btn").addEventListener("click", () => {
+    document.getElementById("start-screen").style.display = "none"
+    document.getElementById("game-screen").style.display = "block"
+
+    resetGame()
+    gameRunning = true
+    update()
+})
+// resetear juego
+function resetGame() {
+    score = 0
+    level = 1
+    dropInterval = 500
+    dropCounter = 0
+    lastTime = 0
+
+    updateScoreUI()
+
+    board.forEach(row => row.fill(0))
+
+    piece.shape = pieces[Math.floor(Math.random() * pieces.length)]
+    piece.position.x = Math.floor(board_width / 2 - 2)
+    piece.position.y = 0
+}

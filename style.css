@@ -11,7 +11,6 @@ body{
     #2f554d,
     #386154,
     #517a5a
-    
   );
 } 
 
@@ -62,3 +61,20 @@ h1 {
     border: 1px solid #598d4d;
     color: #1e310e;
 }
+
+canvas {
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+#start-screen{
+    text-align: center;
+    color: #224229;
+}
+
+#play-btn{
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
