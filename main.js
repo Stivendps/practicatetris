@@ -83,7 +83,7 @@ function update (time = 0){
     lastTime = time
     dropCounter += deltaTime
 
-    if (dropCounter > 115){
+    if (dropCounter > 500){
         piece.position.y++
         dropCounter = 0
 
@@ -217,13 +217,14 @@ function removerows(){
     })
 }
 
-update()
-
-
+// variables touch movil
 let touchStartX = 0
 let touchStartY = 0
 let touchEndX = 0
 let touchEndY = 0
+let lastTouchX = 0
+let lastTouchY = 0
+let touchActive = false
 
 const SWIPE_THRESHOLD = 30
 
@@ -268,3 +269,79 @@ function handleSwipe() {
         }
     }
 }
+
+update()
+
+//hacer que la pieza se enganche al dedo al tocar pantalla
+canvas.addEventListener("touchstart", e => {
+    const touch = e.touches[0]
+    touchActive = true
+    lastTouchX = touch.clientX
+    lastTouchY = touch.clientY
+}, { passive: true })
+
+//seguimiento de la pieza al dedo
+canvas.addEventListener("touchmove", e => {
+    if (!touchActive) return
+
+    const touch = e.touches[0]
+    const dx = touch.clientX - lastTouchX
+    const dy = touch.clientY - lastTouchY
+
+    // 👉 Movimiento horizontal fluido
+    if (Math.abs(dx) > block_size * 0.8) {
+        const direction = dx > 0 ? 1 : -1
+        piece.position.x += direction
+        if (checkCollision()) piece.position.x -= direction
+        lastTouchX = touch.clientX
+    }
+
+    // 👇 Soft drop controlado
+    if (dy > block_size * 1.2) {
+        piece.position.y++
+        if (checkCollision()) {
+            piece.position.y--
+            solidifypiece()
+            removerows()
+        }
+        lastTouchY = touch.clientY
+    }
+}, { passive: true })
+
+// soltar touch
+canvas.addEventListener("touchend", () => {
+    touchActive = false
+})
+
+// giro de la pieza con tap rapdo
+let tapStartTime = 0
+
+canvas.addEventListener("touchstart", () => {
+    tapStartTime = Date.now()
+})
+
+canvas.addEventListener("touchend", () => {
+    const tapDuration = Date.now() - tapStartTime
+    if (tapDuration < 180) {
+        rotatePiece()
+    }
+})
+
+//logia de funcion apra la rotacion
+function rotatePiece() {
+    const rotated = []
+    for (let i = 0; i < piece.shape[0].length; i++) {
+        const row = []
+        for (let j = piece.shape.length - 1; j >= 0; j--) {
+            row.push(piece.shape[j][i])
+        }
+        rotated.push(row)
+    }
+
+    const prev = piece.shape
+    piece.shape = rotated
+    if (checkCollision()) piece.shape = prev
+}
+
+
+
